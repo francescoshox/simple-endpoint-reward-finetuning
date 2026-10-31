@@ -1,6 +1,7 @@
 """Recovery and distributed batch contracts, without model downloads or GPUs."""
 
 import json
+import random
 from contextlib import nullcontext
 from types import SimpleNamespace
 
@@ -51,9 +52,24 @@ def test_complete_checkpoint_restores_optimizer_weights_and_rng(tmp_path, monkey
     expected = {key: value.clone() for key, value in model.state_dict().items()}
     config = Config("serf", "hpsv21")
     saved_rng = checkpoint.rng_state()
+    abandoned = tmp_path / ".step_20.partial"
+    abandoned.mkdir()
+    (abandoned / "COMPLETE").write_text("serf\n")
+    (abandoned / "interrupted-write").write_text("preserve me")
+    with pytest.raises(ValueError, match="complete checkpoint"):
+        checkpoint.load(abandoned, config, model, None, optimizer, accelerator)
     path = checkpoint.save(
         tmp_path, 20, config, None, model, None, optimizer, accelerator, 12.5
     )
+
+    def next_update():
+        optimizer.zero_grad(set_to_none=True)
+        inputs = torch.randn(3, 2) * (random.random() + np.random.rand())
+        model(inputs).square().mean().backward()
+        optimizer.step()
+
+    next_update()
+    uninterrupted = {key: value.clone() for key, value in model.state_dict().items()}
     with torch.no_grad():
         model.weight.zero_()
     completed, seconds, rng = checkpoint.load(
@@ -67,10 +83,32 @@ def test_complete_checkpoint_restores_optimizer_weights_and_rng(tmp_path, monkey
     checkpoint.restore_rng(rng)
     assert torch.equal(torch.get_rng_state(), saved_rng["torch"])
     assert np.array_equal(np.random.get_state()[1], saved_rng["numpy"][1])
+    next_update()
+    assert all(
+        torch.equal(value, uninterrupted[key])
+        for key, value in model.state_dict().items()
+    )
     assert (tmp_path / "latest").resolve() == path
+    retained = list(tmp_path.glob(".step_20.*.partial"))
+    assert len(retained) == 1
+    assert (retained[0] / "interrupted-write").read_text() == "preserve me"
+    second = checkpoint.save(
+        tmp_path, 40, config, None, model, None, optimizer, accelerator, 25.0
+    )
+    assert (tmp_path / "latest").resolve() == second
     (path / "COMPLETE").unlink()
     with pytest.raises(ValueError, match="complete checkpoint"):
         checkpoint.load(path, config, model, None, optimizer, accelerator)
+
+
+def test_checkpoint_rejects_broadcastable_wrong_shapes_without_mutation():
+    model = torch.nn.Linear(2, 1)
+    original = {key: value.clone() for key, value in model.state_dict().items()}
+    state = {key: value.clone() for key, value in original.items()}
+    state["weight"] = torch.zeros(1, 1)
+    with pytest.raises(ValueError, match="shape mismatch"):
+        checkpoint.load_mutable(model, state)
+    assert all(torch.equal(value, original[key]) for key, value in model.state_dict().items())
 
 
 def test_bundled_prompt_splits_match_the_manifest():

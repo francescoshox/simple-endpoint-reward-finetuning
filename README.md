@@ -74,7 +74,7 @@ uv run bash scripts/hpsv21_rsm.sh --check-config
 
 ## Evaluate and resume
 
-Each validation evaluates **200 held-out task prompts and 200 DrawBench prompts, with 16 images per prompt**: 6,400 current-policy images in total. It reports PickScore, HPSv2.1, ImageReward, CLIPScore, per-prompt FID to the frozen base, and DreamSim ensemble diversity. Base reference images/features are cached. See [the complete reproduction protocol](docs/reproduction.md).
+Each validation evaluates **200 task test-split prompts and 200 DrawBench prompts, with 16 images per prompt**: 6,400 current-policy images in total. It reports PickScore, HPSv2.1, ImageReward, CLIPScore, per-prompt FID to the frozen base, and DreamSim ensemble diversity. Base reference images/features are cached. HPDv2 test-split prompts are not all unseen training text: 93 of the selected 200 appear in its training prompt pool; see [split details](prompts/README.md). See [the complete reproduction protocol](docs/reproduction.md).
 
 `metrics.jsonl` and the resolved configuration are written to the run directory. Checkpoints contain the optimizer, live LoRA, evaluation EMA, method-specific mutable weights, counters and each rank's random state. Portable LoRA exports are included in `step_N/`, with EMA weights in `step_N/evaluation/`.
 

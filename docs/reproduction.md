@@ -10,6 +10,8 @@
 - bfloat16 model computation, float32 trainable LoRA, VAE decoding and reward differentiation. EMA decay 0.9, updated once after each optimizer update.
 - The deterministic prompt/image-seed sampler constructs a global schedule before sharding it across ranks. Model initialization uses the shared seed; rank-local random operations use `seed + rank` after initialization. This keeps prompt/image-seed assignments stable when changing GPU count, but does not promise identical floating-point training across topologies.
 
+The original SERF/RSM trainer constructed LoRA adapters before setting its rank-local training seed, and initialized the reward scorer after that seed. This release explicitly seeds model initialization and resets the training RNG after setup. The same nominal seed therefore does not recreate the original random stream, even at the same GPU count. Mathematical equivalence and close numerical reproduction are distinct from bitwise replay of those historical runs.
+
 ## Method-specific behavior
 
 **SERF.** Generate an endpoint and differentiate its reward once. Repeat the endpoint gradient across four independently sampled times/noises. Match the conditional residual velocity against the unweighted endpoint reward gradient. The four losses use independently re-noised endpoint states, not rollout states. Timestep sampling is biased toward low noise with weights proportional to `1 − t` on a 1,000-point SD3.5 grid. Rollouts use CFG 4.5; the matching loss uses the conditional velocity, preserving the paper recipe.
@@ -28,8 +30,10 @@ The ten recipes and method-specific scales are listed in the root README. No met
 
 Validation runs after updates 20, 40, …, 300 and uses the policy EMA. Each run evaluates two suites:
 
-1. `task_test`: 200 prompts from the held-out split of the corresponding training dataset, deduplicated and selected deterministically with prompt seed 20260529.
+1. `task_test`: 200 prompts from the test split of the corresponding training dataset, deduplicated and selected deterministically with prompt seed 20260529.
 2. `drawbench`: the 200 unique DrawBench prompts, with the same deterministic selection rule.
+
+HPDv2 splits overlap in prompt text: 93 of the default 200 evaluation prompts occur in the training pool. They should be described as test-split prompts, not necessarily unseen prompts. Pick-a-Pic has no exact prompt overlap; see [prompt provenance](../prompts/README.md).
 
 Each prompt receives 16 fixed image seeds, with seed base 0, CFG 4.5 and 20 Euler steps. This is 3,200 current-policy images per suite, 6,400 total per evaluation. Frozen-base images and derived features use identical prompts/seeds and a versioned cache, so the first evaluation costs more than subsequent ones. Validation saves and restores the training RNG stream and adapter state.
 

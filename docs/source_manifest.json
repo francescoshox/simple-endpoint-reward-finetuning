@@ -168,6 +168,12 @@
       "source": "prompts/drawbench/test.txt",
       "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
       "source_sha256": "9006b98feabb94b28a2bc0c88de42fd4f31a9ec3c2a19e308a02c5385b7172f0"
+    },
+    {
+      "file": "serf/methods/adjoint_matching/preprocess.py",
+      "source": "scripts/adjoint_matching/preprocess.py",
+      "source_snapshot": "adjoint-matching-20260921-220337",
+      "source_sha256": "6d2319057f797580f94d3733a3367ae363d16a055cb1f668fd2128d5902f33af"
     }
   ],
   "first_order_algorithm_source": "RomeoPassaro/first-order-ram@5067e3832df0dae9a68030c672f88b44743807c6"

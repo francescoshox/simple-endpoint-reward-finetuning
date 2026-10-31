@@ -1,6 +1,7 @@
 """Complete checkpoints: mutable weights, optimizer, EMA, counters and every rank's RNG."""
 
 import json, random
+from uuid import uuid4
 from pathlib import Path
 import numpy as np
 import torch
@@ -20,6 +21,8 @@ def load_mutable(model, state):
     expected = set(mutable_state(model))
     if set(state) != expected:
         raise ValueError("Checkpoint parameter schema mismatch")
+    if any(params[n].shape != v.shape for n, v in state.items()):
+        raise ValueError("Checkpoint parameter shape mismatch")
     with torch.no_grad():
         for n, v in state.items():
             params[n].copy_(v)
@@ -50,6 +53,9 @@ def save(
     if final.exists():
         raise FileExistsError(final)
     if accelerator.is_main_process:
+        # Retain interrupted writes for inspection without blocking a retry.
+        if temporary.exists():
+            temporary.rename(output / f".step_{step}.{uuid4().hex}.partial")
         temporary.mkdir(parents=True, exist_ok=False)
     accelerator.wait_for_everyone()
     torch.save(rng_state(), temporary / f"rng_rank_{accelerator.process_index}.pt")
@@ -78,18 +84,18 @@ def save(
     if accelerator.is_main_process:
         temporary.rename(final)
         latest = output / "latest"
-        if latest.is_symlink():
-            latest.unlink()
-        elif latest.exists():
+        if latest.exists() and not latest.is_symlink():
             raise FileExistsError(latest)
-        latest.symlink_to(final.name)
+        link = output / f".latest-{uuid4().hex}"
+        link.symlink_to(final.name)
+        link.replace(latest)
     accelerator.wait_for_everyone()
     return final
 
 
 def load(path, config, policy, value, optimizer, accelerator):
-    path = Path(path)
-    if not (path / "COMPLETE").exists():
+    path = Path(path).resolve()
+    if path.name.endswith(".partial") or not (path / "COMPLETE").exists():
         raise ValueError("Resume requires a complete checkpoint")
     state = torch.load(path / "training.pt", map_location="cpu", weights_only=False)
     if state["world_size"] != accelerator.num_processes:

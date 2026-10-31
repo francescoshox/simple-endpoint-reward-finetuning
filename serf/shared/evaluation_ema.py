@@ -45,7 +45,7 @@ def initialize_evaluation_ema(live, evaluation):
 
 
 def update_evaluation_ema(live, evaluation):
-    """Apply the EAM evaluation EMA once after a successful optimizer update."""
+    """Apply the evaluation EMA once after a successful optimizer update."""
     for source, target in zip(live, evaluation, strict=True):
         target.data.mul_(EMA_DECAY).add_(source.detach().data, alpha=1.0 - EMA_DECAY)
 
