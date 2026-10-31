@@ -1,7 +1,7 @@
 """Local integration adapters for the pinned, unmodified VGGFlow implementation.
 
-Algorithm math and state selection come from upstream. Changes here concern
-frozen reward weights, bounded memory, distributed accounting, and checkpoints.
+Algorithm losses come from upstream. Local adaptations cover near-equal state
+partitions, common frozen rewards, bounded memory and distributed accounting.
 """
 
 import copy

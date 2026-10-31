@@ -4,7 +4,7 @@ from contextlib import contextmanager
 import time
 import torch
 from .core import grid, memoryless_step, lean_adjoint, select_indices, matching_loss
-from .model import _cfg_velocity, latent_to_image
+from serf.shared.sd3 import _cfg_velocity, latent_to_image
 
 
 @contextmanager

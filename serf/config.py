@@ -50,7 +50,6 @@ class Config:
     first_order_coeff: float = 36000.0
     first_order_loss_cfg: bool = False
     timestep_sampling: str = "weighted_low"
-    min_timesteps: int = 400
     trajectory_num_partitions: int = 3
     timestep_fraction: float = 0.3
     reward_scale: float = 200000.0
@@ -66,7 +65,6 @@ class Config:
     quantile_clipping: bool = True
     reward_masking: bool = False
     unet_reg_scale: float = 0.0
-    use_value_net: bool = True
     value_lora_rank: int = 32
     value_lora_alpha: int = 32
     low_var_subsampling: bool = True

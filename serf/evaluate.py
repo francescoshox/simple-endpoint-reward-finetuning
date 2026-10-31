@@ -19,7 +19,7 @@ def evaluate(config, checkpoint, output):
 
         pipe = build_pipeline(config, ac)
     else:
-        from .methods.adjoint_matching.model import build_pipeline
+        from .shared.sd3 import build_pipeline
 
         pipe = build_pipeline(config, ac.device)
     with _load_replicated_peft_adapter():

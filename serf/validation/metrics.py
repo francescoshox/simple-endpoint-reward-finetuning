@@ -29,10 +29,6 @@ def package_version(name):
         return "missing"
 
 
-def metric_keys(name):
-    return [name]
-
-
 class MetricPlugin(ABC):
     name: str
     main_process_only = False
@@ -180,14 +176,6 @@ class MetricRegistry:
 
     def dreamsim(self, type_name):
         return DreamSimMetric(type_name, MODELS_DIR, self.batch_size, self.device)
-
-    def distribution_plugins(self, config):
-        """Legacy eager construction retained for callers outside the runner."""
-        plugins = self.standard_distribution_plugins(config)
-        plugins.extend(
-            self.dreamsim(name) for name in config.distribution_dreamsim_types
-        )
-        return plugins
 
 
 def merge_score_chunks(chunks):

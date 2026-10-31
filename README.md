@@ -1,8 +1,18 @@
 # Simple Endpoint Reward Finetuning
 
-Minimal SD3.5 Medium post-training code for **SERF**, **Reward Score Matching (RSM)**, **Adjoint Matching**, **VGG-Flow**, and **DRaFT-LV**.
+This repository contains the code for **Simple Endpoint Reward Finetuning (SERF)**, together with the baseline implementations and evaluation used in our experiments on Stable Diffusion 3.5 Medium.
 
-Each method has its own algorithm implementation. Model loading, reward scorers, distributed batch scheduling, checkpoints and evaluation are shared. The repository contains one complete training recipe per method for both HPSv2.1 and PickScore.
+SERF and each baseline have separate algorithm modules, with shared model, reward, checkpoint and evaluation utilities. We provide one complete training recipe per method for both HPSv2.1 and PickScore.
+
+## Methods and source code
+
+- **SERF:** our endpoint reward finetuning implementation in [`serf/methods/serf.py`](serf/methods/serf.py).
+- **Reward Score Matching (RSM):** our SD3.5 trajectory-baseline implementation, following [Lee et al.](https://arxiv.org/abs/2604.17415). See the authors' [original code](https://github.com/jaylee2000/rsm) and our [implementation](serf/methods/rsm.py).
+- **Adjoint Matching:** an SD3.5 adaptation of the [memoryless stochastic-control method](https://arxiv.org/abs/2409.08861), with SD3.5 integration informed by [FOCUS](https://github.com/ericbill21/FOCUS). See our [implementation](serf/methods/adjoint_matching/).
+- **DRaFT-LV:** our SD3.5 flow-matching adaptation of [Directly Fine-Tuning Diffusion Models on Differentiable Rewards](https://arxiv.org/abs/2309.17400), using last-step differentiation and low-variance reward paths. See our [implementation](serf/methods/draft_lv.py).
+- **VGG-Flow:** we provide an [integration wrapper](serf/methods/vgg_flow.py) for the [authors' implementation](https://github.com/lzzcd001/vggflow), described in [Value Gradient Guidance for Flow Matching Alignment](https://vggflow25.github.io/). **We do not vendor or redistribute VGG-Flow's algorithm source in this repository because the pinned upstream revision has no explicit license.** Its source is obtained separately from upstream and retains the upstream authors' rights; our MIT license does not cover it.
+
+The local baseline implementations were extracted and adapted from our research codebase. Links above credit the original methods and the source code used as references; they do not imply that every baseline is an unchanged port of the authors' implementation. Exact code origins, retained notices and SD3.5 adaptations are documented in [provenance](docs/provenance.md) and [NOTICE](NOTICE).
 
 ## Installation
 
@@ -14,10 +24,16 @@ cd simple-endpoint-reward-finetuning
 uv sync --frozen
 ```
 
-Accept the [SD3.5 Medium model terms](https://huggingface.co/stabilityai/stable-diffusion-3.5-medium) and authenticate with Hugging Face if access requires it. Then prepare the diffusion model, reward models, evaluation models and pinned VGG-Flow dependency:
+Accept the [SD3.5 Medium model terms](https://huggingface.co/stabilityai/stable-diffusion-3.5-medium) and authenticate with Hugging Face if access requires it. Then prepare the diffusion model, reward models and evaluation models:
 
 ```bash
 uv run python -m serf.prepare
+```
+
+For VGG-Flow, obtain the separately distributed upstream source at the pinned revision:
+
+```bash
+uv run python -m serf.prepare --vgg-flow
 ```
 
 Standard Hugging Face and Torch cache variables are respected. Set `SERF_ASSETS_DIR` to choose the directory for additional reward and DreamSim weights; its default is `~/.cache/serf/assets`. `SERF_VALIDATION_CACHE` selects a reusable cache for frozen-base evaluation. Downloads are preparation steps, not part of training time.
@@ -61,7 +77,8 @@ Each validation evaluates **200 held-out task prompts and 200 DrawBench prompts,
 ```bash
 uv run bash scripts/hpsv21_serf.sh --output runs/hpsv21-serf-s0 --resume runs/hpsv21-serf-s0/latest
 
-uv run torchrun --master_addr=127.0.0.1 --master_port=29501 --nproc_per_node=4   -m serf.evaluate --checkpoint runs/hpsv21-serf-s0/step_300 --output runs/reevaluation
+uv run torchrun --master_addr=127.0.0.1 --master_port=29501 --nproc_per_node=4 \
+  -m serf.evaluate --checkpoint runs/hpsv21-serf-s0/step_300 --output runs/reevaluation
 ```
 
 A complete checkpoint resumes with the same GPU count and recipe. Random-state restoration preserves the training stream; changing hardware, GPU count, kernels or library versions can change numerical results. Interrupted `.partial` directories are never accepted as checkpoints. If validation was interrupted after a complete training checkpoint, resume finishes that validation before training continues. Standalone evaluation writes `metrics.json` and `validation_metadata.json`.

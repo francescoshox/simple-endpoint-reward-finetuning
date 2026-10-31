@@ -128,7 +128,7 @@
       "source_sha256": "d84d41cff8011c0cab46185e3d7b6409c135802c39bef17d04997a90ec35c392"
     },
     {
-      "file": "serf/methods/adjoint_matching/model.py",
+      "file": "serf/shared/sd3.py",
       "source": "scripts/adjoint_matching/model.py",
       "source_snapshot": "adjoint-matching-20260921-220337",
       "source_sha256": "76cc6ca9c924fa6886eb3fa4152e3257ae84d81e7049cc068dd73ceb4969397f"

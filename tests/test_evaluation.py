@@ -12,7 +12,6 @@ def test_paper_suites_and_metrics():
     c = Config("serf", "hpsv21")
     apply_validation_defaults(c)
     v = ValidationConfig.from_namespace(c)
-    assert not v.run_task_validation
     assert [x.namespace for x in v.distribution_suites] == ["drawbench", "task_test"]
     assert all(x.num_prompts == 200 for x in v.distribution_suites)
     assert v.distribution_samples_per_prompt == 16

@@ -92,7 +92,6 @@ def main():
         prepare_vgg(a.check_only)
     else:
         prepare_assets(a.check_only)
-        prepare_vgg(a.check_only)
 
 
 if __name__ == "__main__":

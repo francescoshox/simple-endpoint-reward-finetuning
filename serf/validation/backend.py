@@ -44,40 +44,17 @@ class SD3GenerationBackend:
             yield
             return
         try:
-            from diffusers import (
-                DPMSolverMultistepScheduler,
-                FlowMatchEulerDiscreteScheduler,
-            )
+            from diffusers import FlowMatchEulerDiscreteScheduler
 
-            if requested == "euler":
-                shift = getattr(
-                    original.config,
-                    "shift",
-                    getattr(original.config, "flow_shift", 1.0),
-                )
-                self.pipe.scheduler = FlowMatchEulerDiscreteScheduler(
-                    num_train_timesteps=original.config.num_train_timesteps,
-                    shift=float(shift),
-                )
-            elif requested == "dpmpp_2m":
-                shift = getattr(
-                    original.config,
-                    "shift",
-                    getattr(original.config, "flow_shift", 1.0),
-                )
-                self.pipe.scheduler = DPMSolverMultistepScheduler(
-                    num_train_timesteps=original.config.num_train_timesteps,
-                    algorithm_type="dpmsolver++",
-                    solver_order=2,
-                    solver_type="midpoint",
-                    prediction_type="flow_prediction",
-                    lower_order_final=True,
-                    use_flow_sigmas=True,
-                    flow_shift=float(shift),
-                    final_sigmas_type="zero",
-                )
-            else:  # validated by ValidationConfig
-                raise ValueError(f"Unsupported evaluation scheduler {requested!r}")
+            if requested != "euler":
+                raise ValueError("Paper evaluation uses the Euler scheduler")
+            shift = getattr(
+                original.config, "shift", getattr(original.config, "flow_shift", 1.0)
+            )
+            self.pipe.scheduler = FlowMatchEulerDiscreteScheduler(
+                num_train_timesteps=original.config.num_train_timesteps,
+                shift=float(shift),
+            )
             yield
         finally:
             self.pipe.scheduler = original

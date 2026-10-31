@@ -5,7 +5,6 @@ from __future__ import annotations
 import gc
 import hashlib
 import json
-import math
 import os
 import random
 import time
@@ -74,32 +73,6 @@ def cfg_label(value):
     return f"{float(value):g}"
 
 
-def load_prompts(path):
-    path = Path(path)
-    if (
-        not path.exists()
-        and path.suffix == ".txt"
-        and path.with_suffix(".json").exists()
-    ):
-        path = path.with_suffix(".json")
-    if path.suffix == ".json":
-        import json
-
-        records = json.loads(path.read_text())
-        if not isinstance(records, list):
-            raise ValueError(f"Expected a JSON prompt list in {path}")
-        prompts = [
-            record["text"].strip()
-            for record in records
-            if record.get("text", "").strip()
-        ]
-    else:
-        prompts = [
-            line.strip() for line in path.read_text().splitlines() if line.strip()
-        ]
-    return prompts
-
-
 def select_distribution_prompts(path, count, seed, *, deduplicate=False):
     source = [
         {"source_index": index, "prompt": line.strip()}
@@ -118,11 +91,6 @@ def select_distribution_prompts(path, count, seed, *, deduplicate=False):
         )
     selected = random.Random(seed + DRAWBENCH_SEED_OFFSET).sample(source, count)
     return [dict(record, prompt_index=index) for index, record in enumerate(selected)]
-
-
-def select_drawbench_prompts(path, count, seed):
-    """Backward-compatible selector for the legacy single DrawBench suite."""
-    return select_distribution_prompts(path, count, seed)
 
 
 @dataclass
@@ -253,154 +221,6 @@ class ValidationRunner:
                 f"Distribution sampler returned {len(latents)} images for {len(seeds)} seeds"
             )
         return latents
-
-    def run_task(self, step, training_rewards=None):
-        if self.task_prompt_path is None:
-            return ValidationResult()
-        prompts = load_prompts(self.task_prompt_path)
-        if not prompts:
-            raise ValueError(
-                f"Validation prompt file is empty: {self.task_prompt_path}"
-            )
-        count = max(1, math.floor(len(prompts) * self.config.prompt_fraction))
-        prompts = prompts[:count]
-        local_indices = list(range(count))[
-            self.accelerator.process_index :: self.accelerator.num_processes
-        ]
-        training_names = (
-            list(getattr(self.raw_config, "rewards", ()))
-            if training_rewards is None
-            else list(training_rewards)
-        )
-        training_rewards = dict(training_rewards or {})
-        reusable = dict(self.reusable_rewards)
-        reusable.update(training_rewards)
-        registry = MetricRegistry(
-            self.accelerator.device, self.config.reward_batch_size, reusable=reusable
-        )
-        names = list(dict.fromkeys([*training_names, *self.config.task_rewards]))
-        distributed = [
-            registry.reward(name) for name in names if name not in MAIN_PROCESS_ONLY
-        ]
-        main_only_names = [name for name in names if name in MAIN_PROCESS_ONLY]
-        local_rows = []
-        try:
-            for scale in self.config.guidance_scales:
-                images_for_scale = []
-                prompt_batch = []
-                index_batch = []
-                bs = self.config.actual_sampling_batch_size(scale)
-                for start in range(0, len(local_indices), bs):
-                    indices = local_indices[start : start + bs]
-                    batch_prompts = [prompts[index] for index in indices]
-                    seeds = [self.config.seed + index for index in indices]
-                    # Task validation historically initializes noise with one
-                    # device generator per prompt; keep that exact convention.
-                    terminal = self.backend.sample_latents(
-                        batch_prompts, seeds, scale, cpu_noise=False
-                    )
-                    images = self.backend.decode_fp32(
-                        terminal, self.config.reward_batch_size
-                    )
-                    images_for_scale.append(images)
-                    prompt_batch.extend(batch_prompts)
-                    index_batch.extend(indices)
-                if images_for_scale:
-                    images = torch.cat(images_for_scale)
-                else:
-                    images = torch.empty((0, 3, 0, 0), device=self.accelerator.device)
-                plugin_values = {}
-                for plugin in distributed:
-                    plugin_values.update(plugin.score(images, prompt_batch))
-                # Keep uint8 images only for small artifacts and optional main-rank metrics.
-                uint8 = (images * 255).round().clamp(0, 255).to(torch.uint8).cpu()
-                for offset, (index, prompt) in enumerate(
-                    zip(index_batch, prompt_batch)
-                ):
-                    local_rows.append(
-                        {
-                            "guidance_scale": float(scale),
-                            "prompt_index": index,
-                            "prompt": prompt,
-                            "scores": {
-                                name: values[offset]
-                                for name, values in plugin_values.items()
-                            },
-                            "image": uint8[offset]
-                            if index < PREVIEW_PROMPTS or main_only_names
-                            else torch.empty(0),
-                        }
-                    )
-            rows = self._gather_rows(local_rows)
-            if not self.accelerator.is_main_process:
-                return ValidationResult()
-            if main_only_names:
-                main_registry = MetricRegistry(
-                    self.accelerator.device, 1, reusable=reusable
-                )
-                for name in main_only_names:
-                    plugin = main_registry.reward(name)
-                    try:
-                        for row in rows:
-                            image = (
-                                row["image"]
-                                .unsqueeze(0)
-                                .to(self.accelerator.device)
-                                .float()
-                                / 255
-                            )
-                            scores = plugin.score(image, [row["prompt"]])
-                            row["scores"].update(
-                                {key: value[0] for key, value in scores.items()}
-                            )
-                    finally:
-                        plugin.close()
-            result = ValidationResult()
-            for scale in self.config.guidance_scales:
-                selected = [
-                    row for row in rows if row["guidance_scale"] == float(scale)
-                ]
-                keys = sorted({key for row in selected for key in row["scores"]})
-                prefix = (
-                    self.task_namespace
-                    if len(self.config.guidance_scales) == 1
-                    else f"{self.task_namespace}/cfg_{cfg_label(scale)}"
-                )
-                for key in keys:
-                    values = torch.stack(
-                        [
-                            torch.as_tensor(row["scores"][key]).float()
-                            for row in selected
-                        ]
-                    )
-                    result.scalars[f"{prefix}/{key}"] = torch.nanmean(values).item()
-                score_keys = [name for name in training_names if name in keys]
-                if score_keys:
-                    totals = [
-                        sum(float(row["scores"][name]) for name in score_keys)
-                        for row in selected
-                    ]
-                    result.scalars[f"{prefix}/rewards"] = float(np.mean(totals))
-                if self.config.wandb_project:
-                    key = (
-                        "samples"
-                        if len(self.config.guidance_scales) == 1
-                        else f"samples/cfg_{cfg_label(scale)}"
-                    )
-                    result.images[key] = [
-                        (
-                            row["image"].permute(1, 2, 0).numpy(),
-                            f"CFG={scale:g} {row['prompt'][:50]}",
-                        )
-                        for row in selected
-                        if row["image"].numel()
-                    ]
-            return result
-        finally:
-            for plugin in distributed:
-                plugin.close()
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
 
     def _suite_prompt_path(self, suite):
         if suite.source == "task_test":
@@ -866,7 +686,7 @@ class ValidationRunner:
                 torch.cuda.empty_cache()
 
     def run_drawbench(self, step):
-        """Run every configured distribution suite (legacy name retained)."""
+        """Evaluate each configured held-out prompt suite."""
         result = ValidationResult()
         for suite in self.config.distribution_suites:
             with self.backend.evaluation_scheduler(
@@ -998,126 +818,10 @@ class ValidationRunner:
         )
         return result
 
-    def _reduce_reference(self, suite, prompts, base_rows, plugins):
-        """Reduce cached SD3.5 outputs without generating a current policy."""
-
-        base = {(row["guidance_scale"], row["prompt_index"]): row for row in base_rows}
-        result = ValidationResult()
-        for scale in self.config.distribution_guidance_scales:
-            aggregated = {}
-            for prompt in prompts:
-                reference = base[(float(scale), prompt["prompt_index"])]
-                for plugin in plugins:
-                    reference_value = reference["values"][plugin.name]
-                    if isinstance(plugin, FidMetric):
-                        aggregated.setdefault("fid_to_base", []).append(0.0)
-                    elif isinstance(plugin, DreamSimMetric):
-                        value = plugin.reduce_group(reference_value)
-                        aggregated.setdefault(
-                            f"dreamsim_diversity/{plugin.type_name}/base", []
-                        ).append(value)
-                    else:
-                        aggregated.setdefault(f"rewards/{plugin.name}/base", []).extend(
-                            reference_value.flatten().tolist()
-                        )
-            prefix = f"{suite.namespace}/cfg_{cfg_label(scale)}"
-            for name, values in aggregated.items():
-                result.scalars[f"{prefix}/{name}"] = float(np.mean(values))
-        return result
-
-    def run_reference_cache(self, step):
-        """Populate and validate all reusable base-model cache entries."""
-
-        started = time.perf_counter()
-        result = ValidationResult()
-        with self._rng_context():
-            for suite in self.config.distribution_suites:
-                prompts = self._suite_prompts(suite)
-                registry = MetricRegistry(
-                    self.accelerator.device,
-                    self.config.distribution_batch_size,
-                    reusable=self.reusable_rewards,
-                )
-                plugins = []
-                with self.backend.evaluation_scheduler(
-                    self.config.distribution_sampling_scheduler
-                ):
-                    reference_latents, reference_key = self._reference_latents(
-                        prompts, suite
-                    )
-                    self._validate_distribution_rows(
-                        reference_latents, prompts, require_samples=False
-                    )
-                    local_reference = [
-                        row
-                        for row in reference_latents
-                        if row["prompt_index"] % self.accelerator.num_processes
-                        == self.accelerator.process_index
-                    ]
-                    try:
-                        plugins.extend(
-                            registry.standard_distribution_plugins(self.config)
-                        )
-                        base_rows = self._reference_outputs(
-                            reference_latents, local_reference, reference_key, plugins
-                        )
-                        for plugin in plugins:
-                            plugin.close()
-                        gc.collect()
-                        if torch.cuda.is_available():
-                            torch.cuda.empty_cache()
-                        for type_name in self.config.distribution_dreamsim_types:
-                            plugin = registry.dreamsim(type_name)
-                            plugins.append(plugin)
-                            try:
-                                extra = self._reference_outputs(
-                                    reference_latents,
-                                    local_reference,
-                                    reference_key,
-                                    [plugin],
-                                )
-                                self._merge_distribution_values(base_rows, extra)
-                            finally:
-                                plugin.close()
-                                gc.collect()
-                                if torch.cuda.is_available():
-                                    torch.cuda.empty_cache()
-                        if self.accelerator.is_main_process:
-                            result.merge(
-                                self._reduce_reference(
-                                    suite, prompts, base_rows, plugins
-                                )
-                            )
-                        result.metadata[f"{suite.namespace}/reference_cache_key"] = (
-                            reference_key
-                        )
-                        if len(self.config.distribution_suites) == 1:
-                            result.metadata["reference_cache_key"] = reference_key
-                    finally:
-                        for plugin in plugins:
-                            plugin.close()
-                        if torch.cuda.is_available():
-                            torch.cuda.empty_cache()
-        elapsed = reduce_max(self.accelerator, time.perf_counter() - started)
-        result.metadata.update(
-            {
-                "reference_cache_dir": str(self.config.reference_cache_dir),
-                "validation_seconds": elapsed,
-            }
-        )
-        result.scalars["eval/validation_gpu_hours"] = (
-            elapsed * self.accelerator.num_processes / 3600
-        )
-        return result
-
     def run(self, step, training_rewards=None, train_seconds=None):
         started = time.perf_counter()
         result = ValidationResult()
         with self._rng_context():
-            if self.config.run_task_validation:
-                with self.backend.evaluation_scheduler():
-                    with self.policies.current_policy():
-                        result.merge(self.run_task(step, training_rewards))
             result.merge(self.run_drawbench(step))
         elapsed = reduce_max(self.accelerator, time.perf_counter() - started)
         result.metadata["validation_seconds"] = elapsed

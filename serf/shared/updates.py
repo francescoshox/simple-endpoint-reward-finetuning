@@ -17,7 +17,7 @@ def build(config, accelerator):
 
         pipe = build_pipeline(config, accelerator.device)
     elif config.method == "adjoint_matching":
-        from serf.methods.adjoint_matching.model import build_pipeline
+        from .sd3 import build_pipeline
 
         pipe = build_pipeline(config, accelerator.device)
     else:

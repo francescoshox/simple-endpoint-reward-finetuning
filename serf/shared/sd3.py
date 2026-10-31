@@ -1,4 +1,4 @@
-"""SD3 construction shared with the local DRaFT baseline."""
+"""SD3.5 policy backbone and CFG helpers shared by AM and DRaFT-LV."""
 
 import os
 import torch
@@ -18,7 +18,7 @@ def build_pipeline(config, device):
         local_files_only=os.environ.get("HF_HUB_OFFLINE") == "1",
     )
     if getattr(config, "sampling_scheduler", "euler") != "euler":
-        raise ValueError("AM grid requires sampling_scheduler=euler")
+        raise ValueError("The training grid requires sampling_scheduler=euler")
     pipe.scheduler = FlowMatchEulerDiscreteScheduler.from_config(pipe.scheduler.config)
     for module in (
         pipe.transformer,
