@@ -108,7 +108,7 @@ class Config:
             dict(
                 namespace="drawbench",
                 source="file",
-                prompt_path=str(ROOT / "prompts/drawbench/test.txt"),
+                prompt_path="prompts/drawbench/test.txt",
                 num_prompts=200,
                 deduplicate=True,
             ),

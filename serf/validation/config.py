@@ -7,6 +7,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from serf.config import ROOT
+
 
 DEFAULT_DRAWBENCH_REWARDS = ("PickScore", "HPSv2", "ImageReward", "CLIPScore")
 VALID_DRAWBENCH_REWARDS = set(DEFAULT_DRAWBENCH_REWARDS)
@@ -128,7 +130,7 @@ def _distribution_suites(config, *, explicit):
             DistributionSuite(
                 namespace=namespace,
                 source=source,
-                prompt_path=Path(prompt_path) if prompt_path else None,
+                prompt_path=(ROOT / prompt_path).resolve() if prompt_path else None,
                 num_prompts=_positive_int(
                     f"distribution_eval_suites[{index}].num_prompts",
                     raw.get("num_prompts", config.distribution_eval_num_prompts),

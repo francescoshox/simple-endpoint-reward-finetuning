@@ -70,13 +70,20 @@ def train(config, output, resume=None):
     if config.wandb_project and ac.is_main_process:
         import wandb
 
+        id_path = output / "wandb_run_id.txt"
+        previous_id = (
+            id_path.read_text().strip() if resume and id_path.exists() else None
+        )
         tracker = wandb.init(
+            id=previous_id,
+            resume="must" if previous_id else None,
             project=config.wandb_project,
             entity=config.wandb_entity,
             name=config.wandb_run_name or output.name,
             config=config.to_dict(),
             dir=str(output),
         )
+        id_path.write_text(tracker.id + "\n")
     pending = {}
 
     def log(values, step=None, **kwargs):
@@ -100,6 +107,11 @@ def train(config, output, resume=None):
             "HPSv2" if config.reward == "hpsv21" else "PickScore": scorer,
         },
     )
+    completed, seconds, rng = 0, 0.0, None
+    if resume:
+        completed, seconds, rng = checkpoint.load(
+            resume, config, policy, value, optimizer, ac
+        )
     if ac.is_main_process:
         (output / "config.json").write_text(
             json.dumps(config.to_dict(), indent=2) + "\n"
@@ -107,14 +119,37 @@ def train(config, output, resume=None):
         import yaml
 
         (output / "config.yaml").write_text(yaml.safe_dump(config.to_dict()))
-    completed, seconds, rng = 0, 0.0, None
-    if resume:
-        completed, seconds, rng = checkpoint.load(
-            resume, config, policy, value, optimizer, ac
-        )
     set_seed(config.seed + ac.process_index)
     if rng is not None:
         checkpoint.restore_rng(rng)
+
+    def validate_step(step, checkpoint_dir):
+        torch.cuda.empty_cache()
+        validator.run(
+            step,
+            training_rewards={config.training_reward_name: scorer},
+            train_seconds=seconds,
+        )
+        if ac.is_main_process:
+            (Path(checkpoint_dir) / "VALIDATED").write_text(str(step) + "\n")
+        ac.wait_for_everyone()
+        torch.cuda.empty_cache()
+
+    # A complete training checkpoint can survive an interruption during eval.
+    # Finish that evaluation before taking another optimizer update.
+    if (
+        resume
+        and completed
+        and (
+            completed % config.eval_every_n_epochs == 0
+            or completed == config.max_train_steps
+        )
+        and not (Path(resume) / "VALIDATED").exists()
+    ):
+        validate_step(completed, resume)
+        if tracker:
+            tracker.log(dict(pending), step=completed)
+            pending.clear()
     for epoch in range(completed, config.max_train_steps):
         torch.cuda.synchronize()
         started = time.perf_counter()
@@ -181,13 +216,7 @@ def train(config, output, resume=None):
                 output, step, config, pipe, policy, value, optimizer, ac, seconds
             )
         if due:
-            torch.cuda.empty_cache()
-            validator.run(
-                step,
-                training_rewards={config.training_reward_name: scorer},
-                train_seconds=seconds,
-            )
-            torch.cuda.empty_cache()
+            validate_step(step, output / f"step_{step}")
         if tracker:
             tracker.log(dict(pending), step=step)
             pending.clear()

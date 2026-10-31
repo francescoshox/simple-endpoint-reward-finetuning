@@ -64,7 +64,7 @@ uv run bash scripts/hpsv21_serf.sh --output runs/hpsv21-serf-s0 --resume runs/hp
 uv run torchrun --master_addr=127.0.0.1 --master_port=29501 --nproc_per_node=4   -m serf.evaluate --checkpoint runs/hpsv21-serf-s0/step_300 --output runs/reevaluation
 ```
 
-A complete checkpoint resumes with the same GPU count and recipe. Random-state restoration preserves the training stream; changing hardware, GPU count, kernels or library versions can change numerical results. Interrupted `.partial` directories are never accepted as checkpoints.
+A complete checkpoint resumes with the same GPU count and recipe. Random-state restoration preserves the training stream; changing hardware, GPU count, kernels or library versions can change numerical results. Interrupted `.partial` directories are never accepted as checkpoints. If validation was interrupted after a complete training checkpoint, resume finishes that validation before training continues. Standalone evaluation writes `metrics.json` and `validation_metadata.json`.
 
 ## Repository layout
 

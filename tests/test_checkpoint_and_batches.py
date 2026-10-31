@@ -88,3 +88,45 @@ def test_bundled_prompt_splits_match_the_manifest():
         "prompts/pickscore/test.txt": 2048,
         "prompts/pickscore/train.txt": 25432,
     }
+
+
+def test_package_import_targets_survive_extraction():
+    import ast
+    import importlib.util
+    from serf.config import ROOT
+
+    for source in (ROOT / "serf").rglob("*.py"):
+        package = ".".join(source.relative_to(ROOT).parts[:-1])
+        for node in ast.walk(ast.parse(source.read_text())):
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            if node.level:
+                name = importlib.util.resolve_name(
+                    "." * node.level + (node.module or ""), package
+                )
+            else:
+                name = node.module or ""
+            if name.startswith("serf"):
+                target = ROOT.joinpath(*name.split("."))
+                assert (
+                    target.with_suffix(".py").is_file()
+                    or (target / "__init__.py").is_file()
+                ), (source, name)
+
+
+def test_validation_prompt_paths_do_not_depend_on_cwd(tmp_path, monkeypatch):
+    from serf.validation.config import ValidationConfig, apply_validation_defaults
+    from serf.config import ROOT
+
+    monkeypatch.chdir(tmp_path)
+    config = Config("serf", "hpsv21")
+    apply_validation_defaults(config)
+    validation = ValidationConfig.from_namespace(config)
+    assert (
+        validation.distribution_suites[0].prompt_path
+        == ROOT / "prompts/drawbench/test.txt"
+    )
+    assert (
+        config.to_dict()["distribution_eval_suites"][0]["prompt_path"]
+        == "prompts/drawbench/test.txt"
+    )
