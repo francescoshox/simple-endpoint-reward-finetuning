@@ -1,0 +1,174 @@
+{
+  "note": "Original source hashes before release import/path and orchestration changes.",
+  "sources": [
+    {
+      "file": "serf/validation/scorers.py",
+      "source": "scripts/validation/scorers.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "26a265e6e3e3a0a21eb92d076dbf48f06f98772ae914a9e0891615317ae15b47"
+    },
+    {
+      "file": "serf/validation/policies.py",
+      "source": "scripts/validation/policies.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "89859eacc54b999634c07715dd7d67bf6d8295320855532c900e3eefd0e7d4dd"
+    },
+    {
+      "file": "serf/validation/cache.py",
+      "source": "scripts/validation/cache.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "8ce1928589399d2d14847bf342d4aa9ab2ce2bb6b89ad495d7f609d9386adcbd"
+    },
+    {
+      "file": "serf/validation/__init__.py",
+      "source": "scripts/validation/__init__.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "d6372d84e9992f642ab9d34821e5a1b2c515579408d9233fde86575e0a21a180"
+    },
+    {
+      "file": "serf/validation/backend.py",
+      "source": "scripts/validation/backend.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "aac1bc81fbe5d9987e2cea8e03ca563056f2c4d847d9b45e2cdab7125a3fb746"
+    },
+    {
+      "file": "serf/validation/config.py",
+      "source": "scripts/validation/config.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "4d6b0baaaa7d2d849826f88c1200dcd9ec192b34122aac38f194360f45cdbbae"
+    },
+    {
+      "file": "serf/validation/metrics.py",
+      "source": "scripts/validation/metrics.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "a9753164c6d994ca9d3a1b05177314f53c23070fa3fbc9f69a7595eda793251b"
+    },
+    {
+      "file": "serf/validation/runner.py",
+      "source": "scripts/validation/runner.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "7b1f8776c069fbf7f3496de24a04044f451c8aa899b2449de642a6898a8b0cda"
+    },
+    {
+      "file": "serf/shared/batch_sampler.py",
+      "source": "scripts/batch_sampler.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "2f14e581ab75b71ceae9a4b9d7ad3dd44fb9282110e02d0ac63a0cfc15562e3b"
+    },
+    {
+      "file": "serf/shared/distributed_metrics.py",
+      "source": "scripts/distributed_metrics.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "7b137ce575d8318c46c697c2a991d2f95eb91479841ba8b6b976736e7f853097"
+    },
+    {
+      "file": "serf/shared/evaluation_ema.py",
+      "source": "scripts/evaluation_ema.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "9ff42cafe0c1f603a80e18af6f1bff178630e1f9a1a8bdd1598f863fd49e6f82"
+    },
+    {
+      "file": "serf/shared/loss_utils.py",
+      "source": "scripts/loss_utils.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "b144b6eaa32093bd2b2a8e0611cccff3ab3c78c871d0788b48f8eeb82d409fce"
+    },
+    {
+      "file": "serf/rewards/clip_scorer.py",
+      "source": "reward_models/clip_scorer.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "95d2191c702abeae537eb4fa93bdf7847d77ac734cedd824a9077c6494aaf84e"
+    },
+    {
+      "file": "serf/rewards/hpsv2_scorer.py",
+      "source": "reward_models/hpsv2_scorer.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "bc010137535d7904dfccbc7d0a6b096eef13a10afaf6aff7b59639bd4b7dd46f"
+    },
+    {
+      "file": "serf/rewards/pickscore_scorer.py",
+      "source": "reward_models/pickscore_scorer.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "ce65733d66e75fceedfe4ba1ad4f9d38387dca331f26d88672bfe5ca10769867"
+    },
+    {
+      "file": "serf/rewards/image_reward.py",
+      "source": "reward_models/image_reward.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "38ac293737c2ff2b1b64c7e738136b412459a017b8197c26089c3110e87f6b3e"
+    },
+    {
+      "file": "serf/rewards/model_ids.py",
+      "source": "reward_models/model_ids.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "d78033197ade2fdc5da8657cb4223804c5d8ef8ef3275eefff22948cd5d504d4"
+    },
+    {
+      "file": "serf/rewards/paths.py",
+      "source": "reward_models/paths.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "cf07ecdf66a38860f6317a68656ecc0800f09f1c0a3f0c2bf1a8ad3f5f98a339"
+    },
+    {
+      "file": "serf/methods/draft_lv.py",
+      "source": "scripts/draft_lv/runtime.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "978eb1450cbfe5e58d8c213d31c965476f90b92d4e6be9a63d75b11f15847af2"
+    },
+    {
+      "file": "serf/methods/adjoint_matching/core.py",
+      "source": "scripts/adjoint_matching/core.py",
+      "source_snapshot": "adjoint-matching-20260921-220337",
+      "source_sha256": "0f6584c82af1f8e5b0c8efaba3019461c8d883792704750ac8f0962a0102144a"
+    },
+    {
+      "file": "serf/methods/adjoint_matching/runtime.py",
+      "source": "scripts/adjoint_matching/runtime.py",
+      "source_snapshot": "adjoint-matching-20260921-220337",
+      "source_sha256": "d84d41cff8011c0cab46185e3d7b6409c135802c39bef17d04997a90ec35c392"
+    },
+    {
+      "file": "serf/methods/adjoint_matching/model.py",
+      "source": "scripts/adjoint_matching/model.py",
+      "source_snapshot": "adjoint-matching-20260921-220337",
+      "source_sha256": "76cc6ca9c924fa6886eb3fa4152e3257ae84d81e7049cc068dd73ceb4969397f"
+    },
+    {
+      "file": "serf/methods/vgg_flow.py",
+      "source": "scripts/vggflow_runtime.py",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "13779967cc9a8fd8082e6985a93fe5d2b2c4ffe6ad5254a676bfa9a68eabb8c2"
+    },
+    {
+      "file": "prompts/pickscore/train.txt",
+      "source": "prompts/pickscore/train.txt",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "2f425adcbb9a6d0feee7c6c448e1cb83a1f71deca9434b803907e2578eca837f"
+    },
+    {
+      "file": "prompts/pickscore/test.txt",
+      "source": "prompts/pickscore/test.txt",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "d75c025fa451866e70f7e36243f7cdd93095523cb51f5f9651f2ce3236d20262"
+    },
+    {
+      "file": "prompts/hpsv2/train.txt",
+      "source": "prompts/hpsv2/train.txt",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "a697f6eb5b3594d191e1533a1a8553dacca7bb91d4b407573f505d97b1362ed2"
+    },
+    {
+      "file": "prompts/hpsv2/test.txt",
+      "source": "prompts/hpsv2/test.txt",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "ea60eba3c14bfe9122881d77a83fd69717b02a9f46a838bd1c84680bf13b582f"
+    },
+    {
+      "file": "prompts/drawbench/test.txt",
+      "source": "prompts/drawbench/test.txt",
+      "source_snapshot": "6aadd1f1596e90cf86a7d0f94b1a4c533267bef1",
+      "source_sha256": "9006b98feabb94b28a2bc0c88de42fd4f31a9ec3c2a19e308a02c5385b7172f0"
+    }
+  ],
+  "first_order_algorithm_source": "RomeoPassaro/first-order-ram@5067e3832df0dae9a68030c672f88b44743807c6"
+}

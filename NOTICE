@@ -1,0 +1,23 @@
+Simple Endpoint Reward Finetuning
+
+Portions of this repository are adapted from RomeoPassaro/first-order-ram
+(MIT; copyright 2026 Andreas Bergmeister). The complete original notice is
+preserved in third_party/first-order-ram-LICENSE. File-level origins and
+pre-adaptation hashes are recorded in docs/source_manifest.json.
+
+VGG-Flow algorithm code is NOT redistributed in this repository. The preparation
+command obtains lzzcd001/vggflow at e9748e71d9b2a9d1202effeb682b006a8c234ccf.
+No explicit upstream license file was present at this revision; our MIT license
+does not license that dependency. Consult the upstream authors for its terms.
+
+Models, datasets and installed dependencies retain their original licenses.
+In particular, the SD3.5 model license and the source datasets' terms apply
+independently of this source-code license. Prompt files are dataset-derived
+artifacts and are not relicensed by this notice.
+
+Algorithm citations and adaptation details: docs/provenance.md.
+
+serf/rewards/image_reward.py includes code adapted from ImageReward
+(copyright 2023 Jiazheng Xu, Xiao Liu), licensed under Apache-2.0.
+The full license is in third_party/ImageReward-LICENSE. The file carries
+modification notices; its upstream terms are retained.

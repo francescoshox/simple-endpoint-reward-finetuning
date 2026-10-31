@@ -1,0 +1,32 @@
+[
+  {
+    "path": "prompts/drawbench/test.txt",
+    "sha256": "9006b98feabb94b28a2bc0c88de42fd4f31a9ec3c2a19e308a02c5385b7172f0",
+    "lines": 1000,
+    "unique": 200
+  },
+  {
+    "path": "prompts/hpsv2/test.txt",
+    "sha256": "ea60eba3c14bfe9122881d77a83fd69717b02a9f46a838bd1c84680bf13b582f",
+    "lines": 400,
+    "unique": 400
+  },
+  {
+    "path": "prompts/hpsv2/train.txt",
+    "sha256": "a697f6eb5b3594d191e1533a1a8553dacca7bb91d4b407573f505d97b1362ed2",
+    "lines": 103665,
+    "unique": 103665
+  },
+  {
+    "path": "prompts/pickscore/test.txt",
+    "sha256": "d75c025fa451866e70f7e36243f7cdd93095523cb51f5f9651f2ce3236d20262",
+    "lines": 2048,
+    "unique": 2048
+  },
+  {
+    "path": "prompts/pickscore/train.txt",
+    "sha256": "2f425adcbb9a6d0feee7c6c448e1cb83a1f71deca9434b803907e2578eca837f",
+    "lines": 25432,
+    "unique": 25432
+  }
+]
