@@ -30,11 +30,13 @@ Accept the [SD3.5 Medium model terms](https://huggingface.co/stabilityai/stable-
 uv run python -m serf.prepare
 ```
 
-For VGG-Flow, obtain the separately distributed upstream source at the pinned revision:
+For VGG-Flow, add `--vgg-flow` to the same preparation command to also obtain the separately distributed upstream source at the pinned revision:
 
 ```bash
 uv run python -m serf.prepare --vgg-flow
 ```
+
+Preparation downloads SD3.5 Medium, PickScore, HPSv2.1 and its CLIP backbone, CLIPScore, ImageReward and its tokenizer, DreamSim ensemble, and canonical FID weights. It runs on CPU and reuses cached downloads. Prompt splits are already included. Verify the prepared assets without downloads or GPUs with `uv run python -m serf.prepare --check-only`. Use the same cache locations during preparation and training, including on offline workers.
 
 The pinned HPSv2 wheel omits a tokenizer vocabulary file. Preparation restores that single file from the locked CLIP package after checking its SHA-256; package versions remain unchanged.
 

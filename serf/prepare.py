@@ -1,6 +1,6 @@
 """Prepare pinned model/reward assets and the upstream VGG-Flow dependency."""
 
-import argparse, hashlib, shutil, subprocess
+import argparse, hashlib, shutil, subprocess, tempfile
 from importlib.metadata import distribution
 from pathlib import Path
 from .config import Config, ROOT
@@ -72,11 +72,65 @@ def prepare_vgg(check=False):
         raise ValueError("Unexpected VGG-Flow revision")
 
 
+
+FID_WEIGHTS_SHA256 = "6726825d0af5f729cebd5821db510b11b1cfad8faad88a03f1befd49fb9129b2"
+
+
+def prepare_fid_weights(check=False):
+    """Fetch the canonical torch-fidelity checkpoint, verifying the paper asset."""
+    from torch.hub import download_url_to_file
+    from torch_fidelity.feature_extractor_inceptionv3 import URL_INCEPTION_V3
+    from .validation.scorers import canonical_fid_weights_path, FID_WEIGHTS_FILENAME
+
+    try:
+        path = canonical_fid_weights_path()
+    except FileNotFoundError:
+        if check:
+            raise
+        path = MODELS_DIR / "torch/hub/checkpoints" / FID_WEIGHTS_FILENAME
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as file:
+            temporary = Path(file.name)
+        try:
+            download_url_to_file(URL_INCEPTION_V3, str(temporary), hash_prefix=FID_WEIGHTS_SHA256)
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for data in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(data)
+    if digest.hexdigest() != FID_WEIGHTS_SHA256:
+        raise ValueError(f"Canonical FID weights have an unexpected SHA-256: {path}")
+    return path
+
+
+def check_dreamsim_assets():
+    """Verify the ensemble cache layout of the locked DreamSim version offline."""
+    required = [
+        "dino_vitb16_pretrain.pth",
+        "clip_vitb16_pretrain.pth.tar",
+        "open_clip_vitb16_pretrain.pth.tar",
+        "ensemble_lora/adapter_config.json",
+        "facebookresearch_dino_main/hubconf.py",
+        "checkpoints/dino_vitbase16_pretrain.pth",
+    ]
+    adapters = [MODELS_DIR / "ensemble_lora" / name for name in
+                ("adapter_model.safetensors", "adapter_model.bin")]
+    missing = [str(MODELS_DIR / name) for name in required
+               if not (MODELS_DIR / name).is_file() or not (MODELS_DIR / name).stat().st_size]
+    if not any(path.is_file() and path.stat().st_size for path in adapters):
+        missing.append(str(MODELS_DIR / "ensemble_lora/adapter_model.{safetensors,bin}"))
+    if missing:
+        raise FileNotFoundError("Missing DreamSim assets; run python -m serf.prepare: " + ", ".join(missing))
+
+
 def prepare_assets(check=False):
     prepare_hps_vocab(check=check)
     from huggingface_hub import snapshot_download, hf_hub_download
 
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    if not check:
+        MODELS_DIR.mkdir(parents=True, exist_ok=True)
     c = Config("serf", "hpsv21")
     for name, revision in [
         (c.model_name, c.model_revision),
@@ -98,14 +152,14 @@ def prepare_assets(check=False):
                 shutil.copyfile(src, MODELS_DIR / name)
     if check:
         required = ["ImageReward/ImageReward.pt", "ImageReward/med_config.json"]
-        # DreamSim cache layout differs by package build; its constructor is
-        # checked during evaluation rather than assuming an adapter filename.
         for name in required:
             if not (MODELS_DIR / name).is_file():
                 raise FileNotFoundError(MODELS_DIR / name)
-        from .validation.scorers import canonical_fid_weights_path
+        from transformers import BertTokenizer
 
-        canonical_fid_weights_path()
+        BertTokenizer.from_pretrained("bert-base-uncased", local_files_only=True)
+        check_dreamsim_assets()
+        prepare_fid_weights(check=True)
     else:
         from .rewards.image_reward import rm_load
         from .validation.scorers import DreamSimScorer, CanonicalFidScorer
@@ -114,6 +168,8 @@ def prepare_assets(check=False):
         del del_model
         scorer = DreamSimScorer("ensemble", MODELS_DIR, 10, "cpu")
         del scorer
+        check_dreamsim_assets()
+        prepare_fid_weights()
         scorer = CanonicalFidScorer(batch_size=10, device="cpu")
         del scorer
     print("Pinned SD3.5 and paper scorer assets ready")
@@ -121,13 +177,12 @@ def prepare_assets(check=False):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--vgg-flow", action="store_true")
+    p.add_argument("--vgg-flow", action="store_true", help="Also fetch the optional pinned VGG-Flow source")
     p.add_argument("--check-only", action="store_true")
     a = p.parse_args()
+    prepare_assets(a.check_only)
     if a.vgg_flow:
         prepare_vgg(a.check_only)
-    else:
-        prepare_assets(a.check_only)
 
 
 if __name__ == "__main__":
