@@ -16,7 +16,7 @@ The local baseline implementations were extracted and adapted from our research 
 
 ## Installation
 
-The environment is locked to the experiment stack: **Python 3.11.15, PyTorch 2.12.1, CUDA 13.0**. Linux ARM64 and x86-64 dependencies are resolved in `uv.lock`; training requires NVIDIA GPUs and a compatible driver. The reference hardware is NVIDIA GH200.
+The environment is locked to the experiment stack: **Python 3.11.15, PyTorch 2.12.1, CUDA 13.0**. Linux ARM64 and x86-64 dependencies are resolved in `uv.lock`; training requires NVIDIA GPUs and a compatible driver. The reference hardware is NVIDIA GH200. Git and uv are required; VGG-Flow also needs Git on training workers to verify its pinned upstream checkout.
 
 ```bash
 git clone https://github.com/francescoshox/simple-endpoint-reward-finetuning.git
@@ -35,6 +35,8 @@ For VGG-Flow, obtain the separately distributed upstream source at the pinned re
 ```bash
 uv run python -m serf.prepare --vgg-flow
 ```
+
+The pinned HPSv2 wheel omits a tokenizer vocabulary file. Preparation restores that single file from the locked CLIP package after checking its SHA-256; package versions remain unchanged.
 
 Standard Hugging Face and Torch cache variables are respected. Set `SERF_ASSETS_DIR` to choose the directory for additional reward and DreamSim weights; its default is `~/.cache/serf/assets`. `SERF_VALIDATION_CACHE` selects a reusable cache for frozen-base evaluation. Downloads are preparation steps, not part of training time.
 

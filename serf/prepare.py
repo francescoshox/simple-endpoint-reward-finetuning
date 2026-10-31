@@ -1,6 +1,7 @@
 """Prepare pinned model/reward assets and the upstream VGG-Flow dependency."""
 
-import argparse, shutil, subprocess
+import argparse, hashlib, shutil, subprocess
+from importlib.metadata import distribution
 from pathlib import Path
 from .config import Config, ROOT
 from .upstream import UPSTREAM_REVISION
@@ -15,6 +16,40 @@ from .rewards.model_ids import (
     PICKSCORE_REVISION,
 )
 from .rewards.paths import MODELS_DIR
+
+
+HPS_VOCAB_SHA256 = "924691ac288e54409236115652ad4aa250f48203de50a9e4722a6ecd48d6804a"
+
+
+def prepare_hps_vocab(check=False):
+    """Restore one data file omitted from the pinned HPSv2 wheel.
+
+    The locked CLIP package contains the byte-identical vocabulary. Only this
+    verified data file is copied; no dependency source or version is changed.
+    """
+    target = Path(
+        distribution("hpsv2").locate_file(
+            "hpsv2/src/open_clip/bpe_simple_vocab_16e6.txt.gz"
+        )
+    )
+    if target.is_file():
+        if hashlib.sha256(target.read_bytes()).hexdigest() != HPS_VOCAB_SHA256:
+            raise ValueError("Existing HPSv2 vocabulary has an unexpected SHA-256")
+        return target
+    if check:
+        raise FileNotFoundError(
+            f"Missing HPSv2 package data: {target}. Run python -m serf.prepare first."
+        )
+    source = Path(distribution("clip").locate_file("clip/bpe_simple_vocab_16e6.txt.gz"))
+    data = source.read_bytes()
+    if hashlib.sha256(data).hexdigest() != HPS_VOCAB_SHA256:
+        raise ValueError("The locked CLIP vocabulary has an unexpected SHA-256")
+    # The HPSv2 module reads this adjacent data file during import, before it
+    # exposes a way to configure the tokenizer. Restore the wheel's omission.
+    with target.open("xb") as output:
+        output.write(data)
+    print(f"Restored HPSv2 tokenizer data: {target}")
+    return target
 
 
 def prepare_vgg(check=False):
@@ -38,6 +73,7 @@ def prepare_vgg(check=False):
 
 
 def prepare_assets(check=False):
+    prepare_hps_vocab(check=check)
     from huggingface_hub import snapshot_download, hf_hub_download
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
