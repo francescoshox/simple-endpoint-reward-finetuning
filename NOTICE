@@ -15,7 +15,7 @@ In particular, the SD3.5 model license and the source datasets' terms apply
 independently of this source-code license. Prompt files are dataset-derived
 artifacts and are not relicensed by this notice.
 
-Algorithm citations and adaptation details: docs/provenance.md.
+Algorithm citations and adaptation details: docs/implementation.md.
 
 serf/rewards/image_reward.py includes code adapted from ImageReward
 (copyright 2023 Jiazheng Xu, Xiao Liu), licensed under Apache-2.0.
