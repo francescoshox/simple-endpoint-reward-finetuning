@@ -51,6 +51,10 @@ def train(config, output, resume=None):
         .to(ac.device, dtype=torch.float32)
         .eval()
     )
+    if config.method == "adjoint_matching" and config.am_deterministic:
+        from .methods.adjoint_matching.preprocess import install
+
+        install(scorer, config.training_reward_name)
     if any(p.requires_grad for p in scorer.parameters()):
         raise RuntimeError("Reward weights must be frozen")
     if config.method == "vgg_flow":

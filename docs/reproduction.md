@@ -46,3 +46,5 @@ The public recipes run the full 300-update horizon and retain checkpoints every 
 Reported paper means and sample standard deviations require three seed runs and the original checkpoint-selection rule. The root recipes provide the training settings, not a guarantee that seed 0 at update 300 equals a three-seed table mean. Preserve resolved configuration, update number and validation prompt/seed metadata when reporting a result.
 
 The private development checks that skip intermediate validation are intentionally outside this repository. They are not paper reproduction recipes.
+
+AM retains the original deterministic reward-preprocessing adapter: the forward image transform stays on the GPU, while its input gradient is computed on the CPU because antialiased resize has no deterministic CUDA backward. The scorer, transform parameters and terminal target are unchanged.
